@@ -1,0 +1,2 @@
+pytoniq_core>=0.1.36
+setuptools>=65.5.1

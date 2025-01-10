@@ -1,0 +1,21 @@
+# Compiled Python files
+*.pyc
+__pycache__/
+
+# Distribution / build
+build/
+dist/
+*.egg-info/
+*.egg
+
+# Virtual environments
+venv/
+.venv/
+
+# Editor backups and environment files
+*.swp
+.env
+
+# Byte-compiled / cache
+__pycache__/
+*.py[cod]
