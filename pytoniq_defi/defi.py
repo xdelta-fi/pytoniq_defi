@@ -22,7 +22,7 @@ transfer_notification#7362d09c query_id:uint64 amount:Coins
 excesses#d53276db query_id:uint64 = InternalMsgBody;
 
 burn#595f07bc query_id:uint64 amount:Coins
-       response_destination:MsgAddress custom_payload:(Maybe ^Cell)
+       resaponse_destination:MsgAddress custom_payload:(Maybe ^Cell)
        = InternalMsgBody;
 
 // ----- Unspecified by standard, but suggested format of internal message
@@ -1195,7 +1195,7 @@ class StonfiV2pTONTransfer(TlbScheme):
             .store_uint(self.query_id, 64) \
             .store_coins(self.ton_amount) \
             .store_address(self.refund_address)
-        builder.store_bit(1).store_cell(self.forward_payload) if self.forward_payload is not None else builder.store_bit(0)
+        builder.store_bit(1).store_ref(self.forward_payload) if self.forward_payload is not None else builder.store_bit(0)
         return builder.end_cell()
 
     @classmethod
@@ -1211,6 +1211,144 @@ class StonfiV2pTONTransfer(TlbScheme):
     op = 0x01f3835d
 
     message_type = PayloadType.internal
+############################################################
+class TonstakersDeposit(TlbScheme):
+    """
+    deposit#47d54391 query_id:uint64 = InternalMsgBody;
+    """
+    
+    def __init__(self,
+                 query_id: typing.Optional[int] = 0
+                 ):
+        self.query_id = query_id
+
+    def serialize(self) -> Cell:
+        builder = Builder()
+        builder \
+            .store_uint(0x47d54391, 32) \
+            .store_uint(self.query_id, 64)
+        return builder.end_cell()
+
+    @classmethod
+    def deserialize(cls, cell_slice: Slice):
+        op = cell_slice.load_uint(32)
+        if not op == 0x47d54391:
+          raise ValueError(f"Not a TonstakersDeposit, unknown operation: {op}")
+        return cls(query_id=cell_slice.load_uint(64))
+
+    op = 0x47d54391
+
+    message_type = PayloadType.internal
+
+
+############################################################
+class ToncoV3Swap(TlbScheme):
+    """
+    POOLV3_SWAP#a7fb58f8 
+    query_id:uint64
+    owner_address:MsgAddress
+    source_wallet:MsgAddress
+    params_cell:^[
+        amount:(VarUInteger 16)
+        sqrtPriceLimitX96:uint160
+        minOutAmount:(VarUInteger 16)
+    ]  
+    payloads_cell:^[
+        target_address:MsgAddress
+        ok_forward_amount:(VarUInteger 16)
+        ok_forward_payload:(Maybe ^Cell)
+        ret_forward_amount:(VarUInteger 16)
+        ret_forward_payload:(Maybe ^Cell)
+    ]  
+= ContractMessages;
+
+    """
+    def __init__(self,
+                 query_id: typing.Optional[int] = 0,
+                 owner_address: typing.Optional[Address] = None,
+                 source_wallet: typing.Optional[Address] = None,
+                 amount_in: typing.Optional[int] = 0,
+                sqrtPriceLimitX96: typing.Optional[int] = 0,
+                min_out: typing.Optional[int] = 0,
+                target_address: typing.Optional[Address] = None,
+                ok_forward_amount: typing.Optional[int] = 0,
+                ok_forward_payload: typing.Optional[Cell] = None,
+                ret_forward_amount: typing.Optional[int] = 0,
+                ret_forward_payload: typing.Optional[Cell] = None
+                ):
+        if isinstance(owner_address, str):
+            owner_address = Address(owner_address)
+        if isinstance(source_wallet, str):
+            source_wallet = Address(source_wallet)
+        if isinstance(target_address, str):
+            target_address = Address(target_address)
+        self.query_id = query_id
+        self.owner_address = owner_address
+        self.source_wallet = source_wallet
+        self.amount_in = amount_in
+        self.sqrtPriceLimitX96 = sqrtPriceLimitX96
+        self.min_out = min_out
+        self.target_address = target_address
+        self.ok_forward_amount = ok_forward_amount
+        self.ok_forward_payload = ok_forward_payload
+        self.ret_forward_amount = ret_forward_amount
+        self.ret_forward_payload = ret_forward_payload
+
+    def serialize(self) -> Cell:
+        builder = Builder()
+        builder_params = Builder()
+        builder_payloads = Builder()
+        builder_params \
+            .store_coins(self.amount_in) \
+            .store_uint(self.sqrtPriceLimitX96, 160) \
+            .store_coins(self.min_out)
+        builder_payloads \
+            .store_address(self.target_address) \
+            .store_coins(self.ok_forward_amount)
+        builder_payloads.store_bit(1).store_ref(self.ok_forward_payload) if self.ok_forward_payload is not None else builder_payloads.store_bit(0)
+        builder_payloads \
+            .store_coins(self.ret_forward_amount)
+        builder_payloads.store_bit(1).store_ref(self.ret_forward_payload) if self.ret_forward_payload is not None else builder_payloads.store_bit(0)
+
+        builder \
+            .store_uint(0xa7fb58f8, 32) \
+            .store_uint(self.query_id, 64) \
+            .store_address(self.owner_address) \
+            .store_address(self.source_wallet) \
+            .store_ref(builder_params.end_cell()) \
+            .store_ref(builder_payloads.end_cell())
+        return builder.end_cell()
+
+
+    @classmethod
+    def deserialize(cls, cell_slice: Slice):
+        op = cell_slice.load_uint(32)
+        if not op == 0xa7fb58f8:
+          raise ValueError(f"Not a ToncoV3Swap, unknown operation: {op}")
+        query_id=cell_slice.load_uint(64)
+        owner_address=cell_slice.load_address()
+        source_wallet=cell_slice.load_address()
+        params_cell=cell_slice.load_ref().begin_parse()
+        amount_in=params_cell.load_coins()
+        sqrtPriceLimitX96=params_cell.load_uint(160)
+        min_out=params_cell.load_coins()
+        payloads_cell=cell_slice.load_ref().begin_parse()
+        target_address=payloads_cell.load_address()
+        ok_forward_amount=payloads_cell.load_coins()
+        ok_forward_payload=payloads_cell.load_ref().begin_parse() if payloads_cell.load_bit() else None
+        ret_forward_amount=payloads_cell.load_coins()
+        ret_forward_payload=payloads_cell.load_ref().begin_parse() if payloads_cell.load_bit() else None
+        return cls(query_id=query_id,
+                   owner_address=owner_address,
+                   source_wallet=source_wallet,
+                   amount_in=amount_in,
+                   sqrtPriceLimitX96=sqrtPriceLimitX96,
+                   min_out=min_out,
+                   target_address=target_address,
+                   ok_forward_amount=ok_forward_amount,
+                   ok_forward_payload=ok_forward_payload,
+                   ret_forward_amount=ret_forward_amount,
+                   ret_forward_payload=ret_forward_payload)
 
 
 ############################################################
@@ -1233,7 +1371,7 @@ for name, obj in inspect.getmembers(sys.modules[__name__]):
 
 
 ############################################################
-# Lets put all classes in separate namespaces for better readability (an use the same names)
+# Lets put all classes in separate namespaces for better readability (and possiblity to have DEX.swap for different DEXes)
 
 Jetton = SimpleNamespace()
 Jetton.Transfer = JettonTransfer
@@ -1271,3 +1409,6 @@ StonfiV2 = SimpleNamespace()
 StonfiV2.Swap = StonfiV2MessageSwap
 StonfiV2.pTON = SimpleNamespace()
 StonfiV2.pTON.Transfer = StonfiV2pTONTransfer
+
+Tonstakers = SimpleNamespace()
+Tonstakers.Deposit = TonstakersDeposit
