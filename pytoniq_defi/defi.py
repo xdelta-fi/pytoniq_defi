@@ -1242,6 +1242,35 @@ class TonstakersDeposit(TlbScheme):
 
 
 ############################################################
+class TonstakersBurnPayload(TlbScheme):
+    """
+    waitTillRoundEnd:(## 1) fillOrKill:(## 1) = JettonPayload;
+    """
+
+    def __init__(self,
+                fill_or_kill: typing.Optional[int] = 0,
+                wait_till_round_end: typing.Optional[int] = 0
+                ):
+        self.fill_or_kill = fill_or_kill
+        self.wait_till_round_end = wait_till_round_end
+
+    def serialize(self) -> Cell:
+        builder = Builder()
+        builder \
+            .store_bit(self.fill_or_kill) \
+            .store_bit(self.wait_till_round_end)
+        return builder.end_cell()
+
+    @classmethod
+    def deserialize(cls, cell_slice: Slice):
+        if cell_slice.remaining_bits < 2:
+            raise ValueError("Not enough bits to deserialize TonstakersBurnPayload")
+        wait_till_round_end=cell_slice.load_bit()
+        fill_or_kill=cell_slice.load_bit()
+        return cls(wait_till_round_end=wait_till_round_end,
+                   fill_or_kill=fill_or_kill)
+
+############################################################
 class ToncoV3Swap(TlbScheme):
     """
     POOLV3_SWAP#a7fb58f8 
@@ -1412,3 +1441,4 @@ StonfiV2.pTON.Transfer = StonfiV2pTONTransfer
 
 Tonstakers = SimpleNamespace()
 Tonstakers.Deposit = TonstakersDeposit
+Tonstakers.BurnPayload = TonstakersBurnPayload
