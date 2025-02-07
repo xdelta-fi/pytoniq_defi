@@ -1257,8 +1257,8 @@ class TonstakersBurnPayload(TlbScheme):
     def serialize(self) -> Cell:
         builder = Builder()
         builder \
-            .store_bit(self.fill_or_kill) \
-            .store_bit(self.wait_till_round_end)
+            .store_bit(self.wait_till_round_end) \
+            .store_bit(self.fill_or_kill)
         return builder.end_cell()
 
     @classmethod
